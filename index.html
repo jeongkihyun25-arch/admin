@@ -93,7 +93,7 @@
                     <span id="activeCountBadge" class="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-full">0명</span>
                 </div>
                 <div id="userList" class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-grow text-sm">
-                    </div>
+                </div>
             </div>
 
             <div class="lg:col-span-8 space-y-8">
@@ -127,8 +127,8 @@
     </div>
 
     <script>
-        // 새로 배포한 URL로 자동 업데이트
-        const API_URL = "https://script.google.com/macros/s/AKfycbzPI09shzs7QB81NTm-5mFlQ_KFwbxYIaDm43usTzpPVBEJeElJZrUtVJtjgbDu9jZ6/exec";
+        // 💡 [수정완료] 기현님이 새로 발급받은 API URL로 교체되었습니다.
+        const API_URL = "https://script.google.com/macros/s/AKfycbxk2zwCJgOPjjzjgNw7niq5hmMJjqJ0iTwSSaxZZnyZeuuy1CrigPLtWoP2P5TzRUD4/exec";
         const ADMIN_PW = "1541";
         
         function checkPassword() {
@@ -198,8 +198,17 @@
                 document.getElementById("todayMobile").innerText = data.daily.mobile;
                 document.getElementById("weekCount").innerText = data.weekly.count;
                 
-                // 연간 누적 데이터(yearly) 연동
-                document.getElementById("monthCount").innerText = (data.yearly || data.monthly.count).toLocaleString();
+                // 💡 [수정완료] [object Object] 에러를 방지하고 정확한 숫자를 뽑아옵니다.
+                let yearlyTotal = 0;
+                if (data.yearly && data.yearly.count !== undefined) {
+                    yearlyTotal = data.yearly.count;
+                } else if (data.monthly && data.monthly.count !== undefined) {
+                    yearlyTotal = data.monthly.count;
+                } else {
+                    yearlyTotal = data.yearly || 0;
+                }
+                document.getElementById("monthCount").innerText = yearlyTotal.toLocaleString();
+                
                 document.getElementById("updateTime").innerText = "최종 갱신: " + new Date().toLocaleTimeString();
 
                 const listDiv = document.getElementById("userList");
