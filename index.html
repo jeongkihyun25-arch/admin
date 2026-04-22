@@ -2,123 +2,116 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BSTK 접속 현황 관리</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BSTK 관제 센터</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
         #mainDashboard { display: none; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; }
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .mini-list { max-height: 100px; overflow-y: auto; font-size: 11px; }
     </style>
 </head>
-<body class="min-h-screen text-slate-800">
+<body class="text-slate-800">
 
-    <div id="loginOverlay" class="fixed inset-0 bg-slate-100 z-[9999] flex items-center justify-center p-6">
-        <div class="w-full max-w-sm text-center">
-            <div class="mb-6 inline-block p-5 rounded-full bg-white shadow-sm border border-slate-200">
-                <i class="fa-solid fa-lock text-slate-400 text-3xl"></i>
-            </div>
-            <h1 class="text-2xl font-black text-slate-800 mb-8">ADMIN ACCESS</h1>
-            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-xl">
-                <input type="password" id="pwInput" placeholder="비밀번호 입력" maxlength="4"
-                       class="w-full bg-slate-50 border-none rounded-xl text-slate-800 text-3xl text-center mb-6 py-4 focus:ring-2 focus:ring-blue-500 transition-all">
-                <button onclick="checkPassword()" class="w-full bg-slate-800 text-white font-bold py-4 rounded-xl hover:bg-slate-700 transition-all shadow-md">
-                    로그인
-                </button>
-            </div>
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-[9999] flex items-center justify-center p-6">
+        <div class="w-full max-w-xs text-center">
+            <h1 class="text-white text-2xl font-black mb-8 italic">BSTK ADMIN</h1>
+            <input type="password" id="pwInput" placeholder="PIN" maxlength="4"
+                   class="w-full bg-slate-800 border-none rounded-2xl text-white text-4xl text-center mb-4 py-4 focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-500 transition-all">접속</button>
         </div>
     </div>
 
-    <div id="mainDashboard" class="p-4 lg:p-10 max-w-[1400px] mx-auto">
-        <header class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6">
+    <div id="mainDashboard" class="p-4 max-w-5xl mx-auto">
+        <header class="flex justify-between items-end mb-6">
             <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Manager</span>
-                    <span class="flex items-center gap-1.5 text-blue-600 text-[10px] font-bold">
-                        <span class="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span> 실시간 모니터링 중
-                    </span>
-                </div>
-                <h2 class="text-3xl font-black text-slate-900 tracking-tight">BSTK <span class="text-blue-600 font-black">접속 현황 확인</span></h2>
+                <p id="updateTime" class="text-[9px] font-bold text-blue-600 uppercase mb-1 animate-pulse">LIVE MONITORING</p>
+                <h2 class="text-xl font-black text-slate-900">접속 현황 <span class="text-blue-600">Admin</span></h2>
             </div>
-            <div class="flex flex-col items-end">
-                <p id="updateTime" class="text-[10px] font-bold text-slate-400 mb-2 uppercase">데이터 동기화 중...</p>
-                <div class="w-64 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div class="text-right">
+                <div class="w-24 h-1 bg-slate-200 rounded-full overflow-hidden">
                     <div id="progress" class="h-full bg-blue-600 w-0 transition-all duration-[30000ms] ease-linear"></div>
                 </div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div class="glass-card p-7 rounded-[1.5rem] shadow-sm">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">현재 접속자</p>
+        <section class="glass-card p-5 mb-4 shadow-sm border-l-4 border-l-blue-600">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-tower-broadcast mr-2 text-blue-600"></i>실시간 접속</h3>
+                <span id="activeCountBadge" class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0명</span>
+            </div>
+            <div id="userList" class="flex flex-wrap gap-2">
+                </div>
+        </section>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="glass-card p-4 shadow-sm flex flex-col">
+                <p class="text-[10px] font-bold text-slate-400 mb-1">오늘 접속</p>
+                <div class="flex items-baseline gap-1 mb-3">
+                    <span id="todayCount" class="text-3xl font-black text-slate-900">0</span>
+                    <span class="text-slate-400 font-bold text-[10px]">회</span>
+                </div>
+                <div id="todayUserList" class="mini-list custom-scrollbar space-y-1 text-slate-500 border-t pt-2">
+                    </div>
+            </div>
+
+            <div class="glass-card p-4 shadow-sm flex flex-col">
+                <p class="text-[10px] font-bold text-slate-400 mb-1">이번 주</p>
+                <div class="flex items-baseline gap-1 mb-3">
+                    <span id="weekCount" class="text-3xl font-black text-slate-900">0</span>
+                    <span class="text-slate-400 font-bold text-[10px]">회</span>
+                </div>
+                <div id="weekUserList" class="mini-list custom-scrollbar space-y-1 text-slate-500 border-t pt-2">
+                    </div>
+            </div>
+
+            <div class="glass-card p-4 shadow-sm">
+                <p class="text-[10px] font-bold text-slate-400 mb-1">등록 인원</p>
                 <div class="flex items-baseline gap-1">
-                    <span id="activeCount" class="text-5xl font-black text-slate-900">0</span>
-                    <span class="text-slate-400 font-bold">/ <span id="totalRegistered">0</span>명</span>
+                    <span id="activeCountSmall" class="text-2xl font-black text-blue-600">0</span>
+                    <span class="text-slate-400 font-bold text-xs">/ <span id="totalRegistered">0</span>명</span>
                 </div>
             </div>
-            <div class="glass-card p-7 rounded-[1.5rem] shadow-sm">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">오늘 접속 합계</p>
+
+            <div class="bg-slate-900 p-4 rounded-[1.5rem] shadow-sm text-white">
+                <p class="text-slate-500 text-[10px] font-bold mb-1">TOTAL</p>
                 <div class="flex items-baseline gap-1">
-                    <span id="todayCount" class="text-5xl font-black text-slate-900">0</span>
-                    <span class="text-slate-400 font-bold text-sm">회</span>
+                    <span id="monthCount" class="text-2xl font-black text-white">0</span>
                 </div>
-                <div class="mt-4 flex gap-3">
-                    <div class="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded">PC <span id="todayPc">0</span></div>
-                    <div class="text-[10px] font-bold px-2 py-0.5 bg-purple-50 text-purple-600 rounded">MOB <span id="todayMobile">0</span></div>
-                </div>
-            </div>
-            <div class="glass-card p-7 rounded-[1.5rem] shadow-sm">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">이번 주 누적</p>
-                <div class="flex items-baseline gap-1">
-                    <span id="weekCount" class="text-5xl font-black text-slate-900">0</span>
-                </div>
-            </div>
-            <div class="bg-slate-800 p-7 rounded-[1.5rem] shadow-lg text-white">
-                <p class="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-3">연간 전체 누적 (Total)</p>
-                <span id="monthCount" class="text-5xl font-black">0</span>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div class="lg:col-span-4 glass-card p-8 rounded-[2rem] shadow-sm h-[600px] flex flex-col">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold text-sm text-slate-800">실시간 접속 명단</h3>
-                    <span id="activeCountBadge" class="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-full">0명</span>
-                </div>
-                <div id="userList" class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-grow text-sm">
-                </div>
+        <div class="space-y-4">
+            <div class="glass-card p-5 shadow-sm">
+                <h3 class="font-bold text-[10px] text-slate-400 mb-4 uppercase tracking-widest">24H Trend</h3>
+                <div class="h-32 w-full"><canvas id="trafficChart"></canvas></div>
             </div>
 
-            <div class="lg:col-span-8 space-y-8">
-                <div class="glass-card p-8 rounded-[2rem] shadow-sm">
-                    <h3 class="font-bold text-xs text-slate-400 mb-6 uppercase tracking-widest">24시간 접속 트렌드</h3>
-                    <div class="h-48 w-full"><canvas id="trafficChart"></canvas></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card p-5 shadow-sm">
+                    <h3 class="font-bold text-[10px] text-blue-600 mb-4 uppercase tracking-widest">Access Ranking</h3>
+                    <div id="rankingList" class="space-y-2"></div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="glass-card p-8 rounded-[2rem] shadow-sm">
-                        <h3 class="font-bold text-xs text-blue-600 mb-6 uppercase tracking-widest">누적 접속 랭킹 (Top 10)</h3>
-                        <div id="rankingList" class="space-y-3 text-sm"></div>
-                    </div>
-                    <div class="glass-card p-8 rounded-[2rem] shadow-sm flex flex-col items-center">
-                        <h3 class="font-bold text-xs text-slate-400 mb-6 uppercase tracking-widest text-center w-full">기기별 사용 비중</h3>
-                        <div class="w-40 h-40 relative"><canvas id="deviceChart"></canvas></div>
-                        <div class="mt-6 flex gap-10 text-center">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 mb-1">PC</p>
-                                <p id="pcRatio" class="text-xl font-black text-blue-600">0%</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-400 mb-1">MOBILE</p>
-                                <p id="mobRatio" class="text-xl font-black text-purple-600">0%</p>
-                            </div>
+                <div class="glass-card p-5 shadow-sm flex flex-col items-center">
+                    <h3 class="font-bold text-[10px] text-slate-400 mb-4 uppercase tracking-widest w-full">Device Ratio</h3>
+                    <div class="w-32 h-32 relative"><canvas id="deviceChart"></canvas></div>
+                    <div class="mt-4 flex gap-8">
+                        <div class="text-center">
+                            <p class="text-[9px] font-bold text-slate-400">PC</p>
+                            <p id="pcRatio" class="text-sm font-black text-blue-600">0%</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[9px] font-bold text-slate-400">MOB</p>
+                            <p id="mobRatio" class="text-sm font-black text-purple-600">0%</p>
                         </div>
                     </div>
                 </div>
@@ -127,7 +120,6 @@
     </div>
 
     <script>
-        // 💡 [수정완료] 기현님이 새로 발급받은 API URL로 교체되었습니다.
         const API_URL = "https://script.google.com/macros/s/AKfycbxk2zwCJgOPjjzjgNw7niq5hmMJjqJ0iTwSSaxZZnyZeuuy1CrigPLtWoP2P5TzRUD4/exec";
         const ADMIN_PW = "1541";
         
@@ -138,7 +130,7 @@
                 initCharts(); updateDashboard();
                 setInterval(updateDashboard, 30000);
             } else {
-                alert("비밀번호가 틀렸습니다.");
+                alert("비밀번호 오류");
                 document.getElementById('pwInput').value = '';
             }
         }
@@ -157,16 +149,13 @@
                         data: Array(24).fill(0),
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                        fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0
+                        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0
                     }]
                 },
                 options: { 
                     responsive: true, maintainAspectRatio: false, 
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                        y: { display: false }
-                    }
+                    scales: { x: { display: false }, y: { display: false } }
                 }
             });
 
@@ -174,8 +163,8 @@
             deviceChart = new Chart(ctxD, {
                 type: 'doughnut',
                 data: {
-                    labels: ['PC', 'Mobile'],
-                    datasets: [{ data: [1, 1], backgroundColor: ['#3b82f6', '#a855f7'], borderWidth: 0, cutout: '80%' }]
+                    labels: ['PC', 'Mob'],
+                    datasets: [{ data: [1, 1], backgroundColor: ['#3b82f6', '#a855f7'], borderWidth: 0, cutout: '75%' }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
@@ -190,51 +179,52 @@
                 const res = await fetch(API_URL);
                 const data = await res.json();
 
-                document.getElementById("activeCount").innerText = data.activeCount;
+                // 기본 수치
                 document.getElementById("activeCountBadge").innerText = data.activeCount + "명";
+                document.getElementById("activeCountSmall").innerText = data.activeCount;
                 document.getElementById("totalRegistered").innerText = data.totalRegistered;
                 document.getElementById("todayCount").innerText = data.daily.count;
-                document.getElementById("todayPc").innerText = data.daily.pc;
-                document.getElementById("todayMobile").innerText = data.daily.mobile;
                 document.getElementById("weekCount").innerText = data.weekly.count;
                 
-                // 💡 [수정완료] [object Object] 에러를 방지하고 정확한 숫자를 뽑아옵니다.
-                let yearlyTotal = 0;
-                if (data.yearly && data.yearly.count !== undefined) {
-                    yearlyTotal = data.yearly.count;
-                } else if (data.monthly && data.monthly.count !== undefined) {
-                    yearlyTotal = data.monthly.count;
-                } else {
-                    yearlyTotal = data.yearly || 0;
-                }
+                let yearlyTotal = data.yearly?.count || data.monthly?.count || data.yearly || 0;
                 document.getElementById("monthCount").innerText = yearlyTotal.toLocaleString();
-                
-                document.getElementById("updateTime").innerText = "최종 갱신: " + new Date().toLocaleTimeString();
 
+                // 1. 실시간 명단 (가로 배치)
                 const listDiv = document.getElementById("userList");
-                listDiv.innerHTML = data.activeList.length ? "" : '<div class="h-full flex items-center justify-center text-slate-300 py-20 font-bold italic">접속자 없음</div>';
+                listDiv.innerHTML = data.activeList.length ? "" : '<span class="text-slate-300 text-[11px]">접속자 없음</span>';
                 data.activeList.forEach(u => {
                     listDiv.innerHTML += `
-                        <div class="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
-                            <div class="flex items-center gap-2">
-                                <span class="status-dot bg-blue-600 animate-pulse"></span>
-                                <span class="font-bold text-slate-700">${u.name}님</span>
-                            </div>
-                            <span class="text-[10px] font-bold text-blue-600">접속 중</span>
+                        <div class="bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2 border border-blue-100">
+                            <span class="status-dot bg-blue-600 animate-pulse"></span>
+                            <span class="font-bold text-blue-700 text-[11px]">${u.name}</span>
                         </div>`;
                 });
 
+                // 2. 오늘 접속자 리스트
+                const todayListDiv = document.getElementById("todayUserList");
+                todayListDiv.innerHTML = data.daily.users?.length 
+                    ? data.daily.users.map(u => `<div>• ${u}</div>`).join('') 
+                    : "기록 없음";
+
+                // 3. 이번 주 접속자 리스트
+                const weekListDiv = document.getElementById("weekUserList");
+                weekUserList.innerHTML = data.weekly.users?.length 
+                    ? data.weekly.users.map(u => `<div>• ${u}</div>`).join('') 
+                    : "기록 없음";
+
+                // 4. 랭킹
                 const rankDiv = document.getElementById("rankingList");
                 rankDiv.innerHTML = "";
-                data.ranking.forEach((u, i) => {
+                data.ranking.slice(0, 5).forEach((u, i) => { // 모바일 배려 5위까지만
                     rankDiv.innerHTML += `
-                        <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-lg shadow-sm">
-                            <span class="font-bold text-slate-400 text-xs w-6">#${i+1}</span>
+                        <div class="flex justify-between items-center text-[11px]">
+                            <span class="text-slate-400 font-bold w-4">${i+1}</span>
                             <span class="font-bold text-slate-700 flex-grow">${u.name}</span>
-                            <span class="font-bold text-blue-600">${u.count.toLocaleString()} <span class="text-[9px] text-slate-400">회</span></span>
+                            <span class="font-black text-blue-600">${u.count}회</span>
                         </div>`;
                 });
 
+                // 5. 차트 업데이트
                 trafficChart.data.datasets[0].data = data.hourlyTraffic; trafficChart.update();
                 deviceChart.data.datasets[0].data = [data.total.pc, data.total.mobile]; deviceChart.update();
                 const total = data.total.count || 1;
