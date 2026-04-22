@@ -3,139 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BSTK 관제 센터</title>
+    <title>BSTK 관제 센터 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
         #mainDashboard { display: none; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; }
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-        .mini-list { max-height: 100px; overflow-y: auto; font-size: 11px; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .scroll-list { max-height: 120px; overflow-y: auto; font-size: 12px; }
+        .scroll-list::-webkit-scrollbar { width: 4px; }
+        .scroll-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .rank-number { font-style: italic; font-weight: 900; color: #cbd5e1; }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-[9999] flex items-center justify-center p-6">
         <div class="w-full max-w-xs text-center">
-            <h1 class="text-white text-2xl font-black mb-8 italic">BSTK ADMIN</h1>
+            <h1 class="text-white text-3xl font-black mb-10 tracking-tighter">BSTK <span class="text-blue-500">ADMIN</span></h1>
             <input type="password" id="pwInput" placeholder="PIN" maxlength="4"
-                   class="w-full bg-slate-800 border-none rounded-2xl text-white text-4xl text-center mb-4 py-4 focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-500 transition-all">접속</button>
+                   class="w-full bg-slate-800 border-none rounded-2xl text-white text-4xl text-center mb-6 py-5 focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg">시스템 접속</button>
         </div>
     </div>
 
-    <div id="mainDashboard" class="p-4 max-w-5xl mx-auto">
-        <header class="flex justify-between items-end mb-6">
+    <div id="mainDashboard" class="p-4 max-w-4xl mx-auto space-y-4">
+        <header class="flex justify-between items-center py-2">
             <div>
-                <p id="updateTime" class="text-[9px] font-bold text-blue-600 uppercase mb-1 animate-pulse">LIVE MONITORING</p>
-                <h2 class="text-xl font-black text-slate-900">접속 현황 <span class="text-blue-600">Admin</span></h2>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">관제 센터 <span class="text-blue-600">LIVE</span></h2>
+                <p id="updateTime" class="text-[10px] font-bold text-slate-400">데이터 수신 대기 중...</p>
             </div>
-            <div class="text-right">
-                <div class="w-24 h-1 bg-slate-200 rounded-full overflow-hidden">
-                    <div id="progress" class="h-full bg-blue-600 w-0 transition-all duration-[30000ms] ease-linear"></div>
-                </div>
-            </div>
+            <div id="activeCountBadge" class="bg-blue-600 text-white px-4 py-2 rounded-2xl font-black text-sm shadow-md animate-pulse">0명 접속 중</div>
         </header>
 
-        <section class="glass-card p-5 mb-4 shadow-sm border-l-4 border-l-blue-600">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-tower-broadcast mr-2 text-blue-600"></i>실시간 접속</h3>
-                <span id="activeCountBadge" class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0명</span>
-            </div>
-            <div id="userList" class="flex flex-wrap gap-2">
-                </div>
+        <section class="glass-card p-5 border-l-4 border-l-blue-600">
+            <h3 class="font-bold text-xs text-slate-400 mb-4 uppercase tracking-widest">Active Users</h3>
+            <div id="userList" class="flex flex-wrap gap-2 min-h-[40px]"></div>
         </section>
 
-        <div class="grid grid-cols-2 gap-3 mb-6">
-            <div class="glass-card p-4 shadow-sm flex flex-col">
-                <p class="text-[10px] font-bold text-slate-400 mb-1">오늘 접속</p>
-                <div class="flex items-baseline gap-1 mb-3">
-                    <span id="todayCount" class="text-3xl font-black text-slate-900">0</span>
-                    <span class="text-slate-400 font-bold text-[10px]">회</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Today's Access</h3>
+                    <span id="todayCount" class="text-lg font-black text-blue-600">0</span>
                 </div>
-                <div id="todayUserList" class="mini-list custom-scrollbar space-y-1 text-slate-500 border-t pt-2">
-                    </div>
+                <div id="todayUserList" class="scroll-list space-y-2 pr-2"></div>
             </div>
 
-            <div class="glass-card p-4 shadow-sm flex flex-col">
-                <p class="text-[10px] font-bold text-slate-400 mb-1">이번 주</p>
-                <div class="flex items-baseline gap-1 mb-3">
-                    <span id="weekCount" class="text-3xl font-black text-slate-900">0</span>
-                    <span class="text-slate-400 font-bold text-[10px]">회</span>
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Weekly Access</h3>
+                    <span id="weekCount" class="text-lg font-black text-indigo-600">0</span>
                 </div>
-                <div id="weekUserList" class="mini-list custom-scrollbar space-y-1 text-slate-500 border-t pt-2">
-                    </div>
-            </div>
-
-            <div class="glass-card p-4 shadow-sm">
-                <p class="text-[10px] font-bold text-slate-400 mb-1">등록 인원</p>
-                <div class="flex items-baseline gap-1">
-                    <span id="activeCountSmall" class="text-2xl font-black text-blue-600">0</span>
-                    <span class="text-slate-400 font-bold text-xs">/ <span id="totalRegistered">0</span>명</span>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 p-4 rounded-[1.5rem] shadow-sm text-white">
-                <p class="text-slate-500 text-[10px] font-bold mb-1">TOTAL</p>
-                <div class="flex items-baseline gap-1">
-                    <span id="monthCount" class="text-2xl font-black text-white">0</span>
-                </div>
+                <div id="weekUserList" class="scroll-list space-y-2 pr-2"></div>
             </div>
         </div>
 
-        <div class="space-y-4">
-            <div class="glass-card p-5 shadow-sm">
-                <h3 class="font-bold text-[10px] text-slate-400 mb-4 uppercase tracking-widest">24H Trend</h3>
-                <div class="h-32 w-full"><canvas id="trafficChart"></canvas></div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="glass-card p-5 shadow-sm">
-                    <h3 class="font-bold text-[10px] text-blue-600 mb-4 uppercase tracking-widest">Access Ranking</h3>
-                    <div id="rankingList" class="space-y-2"></div>
+        <section class="glass-card p-5">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest mb-1">24H Traffic Comparison</h3>
+                    <p class="text-[10px] text-slate-400">실시간 오늘 데이터와 과거 평균 데이터 비교</p>
                 </div>
+                <div class="text-right">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Peak Hour</p>
+                    <p id="peakHourText" class="text-lg font-black text-red-500">--시</p>
+                </div>
+            </div>
+            <div class="h-40 w-full"><canvas id="trafficChart"></canvas></div>
+        </section>
 
-                <div class="glass-card p-5 shadow-sm flex flex-col items-center">
-                    <h3 class="font-bold text-[10px] text-slate-400 mb-4 uppercase tracking-widest w-full">Device Ratio</h3>
-                    <div class="w-32 h-32 relative"><canvas id="deviceChart"></canvas></div>
-                    <div class="mt-4 flex gap-8">
-                        <div class="text-center">
-                            <p class="text-[9px] font-bold text-slate-400">PC</p>
-                            <p id="pcRatio" class="text-sm font-black text-blue-600">0%</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[9px] font-bold text-slate-400">MOB</p>
-                            <p id="mobRatio" class="text-sm font-black text-purple-600">0%</p>
-                        </div>
+        <section class="glass-card p-5">
+            <h3 class="font-bold text-xs text-slate-400 mb-5 uppercase tracking-widest">Overall Access Ranking (Top 10)</h3>
+            <div id="rankingList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </section>
+
+        <section class="glass-card p-5 flex flex-col items-center">
+            <h3 class="font-bold text-xs text-slate-400 mb-6 uppercase tracking-widest w-full text-center">Device Engagement</h3>
+            <div class="w-full flex justify-around items-center">
+                <div class="w-28 h-28 relative"><canvas id="deviceChart"></canvas></div>
+                <div class="space-y-4">
+                    <div class="text-right">
+                        <p class="text-[10px] font-bold text-slate-400">PC 사용</p>
+                        <p id="pcRatio" class="text-xl font-black text-blue-600">0%</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-bold text-slate-400">모바일 사용</p>
+                        <p id="mobRatio" class="text-xl font-black text-purple-600">0%</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxk2zwCJgOPjjzjgNw7niq5hmMJjqJ0iTwSSaxZZnyZeuuy1CrigPLtWoP2P5TzRUD4/exec";
+        // ✅ 새로 발급받은 URL 적용
+        const API_URL = "https://script.google.com/macros/s/AKfycbyyw7IOCeHeilh8U2i86gSoVRQgytexeqS5wDd1R0UX_BbRSENErqpIwXkdzjh6qooU/exec";
         const ADMIN_PW = "1541";
         
         function checkPassword() {
             if(document.getElementById('pwInput').value === ADMIN_PW) {
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainDashboard').style.display = 'block';
-                initCharts(); updateDashboard();
-                setInterval(updateDashboard, 30000);
+                document.getElementById('loginOverlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loginOverlay').style.display = 'none';
+                    document.getElementById('mainDashboard').style.display = 'block';
+                    initCharts(); updateDashboard();
+                    setInterval(updateDashboard, 30000);
+                }, 300);
             } else {
-                alert("비밀번호 오류");
+                alert("비밀번호가 틀렸습니다.");
                 document.getElementById('pwInput').value = '';
             }
         }
-
-        document.getElementById('pwInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
 
         let trafficChart, deviceChart;
 
@@ -145,94 +126,65 @@
                 type: 'line',
                 data: {
                     labels: Array.from({length: 24}, (_, i) => i + '시'),
-                    datasets: [{
-                        data: Array(24).fill(0),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0
-                    }]
+                    datasets: [
+                        { label: '오늘', data: Array(24).fill(0), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0 },
+                        { label: '평균', data: Array(24).fill(0), borderColor: '#cbd5e1', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2, pointRadius: 0 }
+                    ]
                 },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } },
-                    scales: { x: { display: false }, y: { display: false } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { display: false } } }
             });
 
             const ctxD = document.getElementById('deviceChart').getContext('2d');
             deviceChart = new Chart(ctxD, {
                 type: 'doughnut',
-                data: {
-                    labels: ['PC', 'Mob'],
-                    datasets: [{ data: [1, 1], backgroundColor: ['#3b82f6', '#a855f7'], borderWidth: 0, cutout: '75%' }]
-                },
+                data: { labels: ['PC', 'Mobile'], datasets: [{ data: [1, 1], backgroundColor: ['#3b82f6', '#a855f7'], borderWidth: 0, cutout: '80%' }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
 
         async function updateDashboard() {
-            const bar = document.getElementById("progress");
-            bar.style.transition = 'none'; bar.style.width = "0%";
-            setTimeout(() => { bar.style.transition = 'width 30000ms linear'; bar.style.width = "100%"; }, 100);
-
             try {
                 const res = await fetch(API_URL);
                 const data = await res.json();
 
-                // 기본 수치
-                document.getElementById("activeCountBadge").innerText = data.activeCount + "명";
-                document.getElementById("activeCountSmall").innerText = data.activeCount;
-                document.getElementById("totalRegistered").innerText = data.totalRegistered;
-                document.getElementById("todayCount").innerText = data.daily.count;
-                document.getElementById("weekCount").innerText = data.weekly.count;
-                
-                let yearlyTotal = data.yearly?.count || data.monthly?.count || data.yearly || 0;
-                document.getElementById("monthCount").innerText = yearlyTotal.toLocaleString();
+                document.getElementById("updateTime").innerText = "마지막 동기화: " + new Date().toLocaleTimeString();
+                document.getElementById("activeCountBadge").innerText = data.activeCount + "명 접속 중";
+                document.getElementById("todayCount").innerText = data.daily.count + "회";
+                document.getElementById("weekCount").innerText = data.weekly.count + "회";
 
-                // 1. 실시간 명단 (가로 배치)
-                const listDiv = document.getElementById("userList");
-                listDiv.innerHTML = data.activeList.length ? "" : '<span class="text-slate-300 text-[11px]">접속자 없음</span>';
+                const userList = document.getElementById("userList");
+                userList.innerHTML = data.activeList.length ? "" : '<p class="text-slate-300 text-xs italic">현재 접속자 없음</p>';
                 data.activeList.forEach(u => {
-                    listDiv.innerHTML += `
-                        <div class="bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-2 border border-blue-100">
-                            <span class="status-dot bg-blue-600 animate-pulse"></span>
-                            <span class="font-bold text-blue-700 text-[11px]">${u.name}</span>
-                        </div>`;
+                    userList.innerHTML += `<span class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-bold border border-blue-100 flex items-center gap-2 text-xs"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span> ${u.name}</span>`;
                 });
 
-                // 2. 오늘 접속자 리스트
-                const todayListDiv = document.getElementById("todayUserList");
-                todayListDiv.innerHTML = data.daily.users?.length 
-                    ? data.daily.users.map(u => `<div>• ${u}</div>`).join('') 
-                    : "기록 없음";
+                const todayList = document.getElementById("todayUserList");
+                todayList.innerHTML = data.daily.users?.length ? data.daily.users.map(u => `<div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg"><span class="font-bold text-slate-700">${u}님</span><span class="text-[9px] text-slate-400 font-bold">TODAY</span></div>`).join('') : '<p class="text-slate-300 text-center py-4 text-xs">오늘 접속 기록 없음</p>';
 
-                // 3. 이번 주 접속자 리스트
-                const weekListDiv = document.getElementById("weekUserList");
-                weekUserList.innerHTML = data.weekly.users?.length 
-                    ? data.weekly.users.map(u => `<div>• ${u}</div>`).join('') 
-                    : "기록 없음";
+                const weekList = document.getElementById("weekUserList");
+                weekList.innerHTML = data.weekly.users?.length ? data.weekly.users.map(u => `<div class="flex justify-between items-center p-2 bg-indigo-50/50 rounded-lg"><span class="font-bold text-slate-700">${u}님</span><span class="text-[9px] text-indigo-400 font-bold">WEEKLY</span></div>`).join('') : '<p class="text-slate-300 text-center py-4 text-xs">주간 접속 기록 없음</p>';
 
-                // 4. 랭킹
-                const rankDiv = document.getElementById("rankingList");
-                rankDiv.innerHTML = "";
-                data.ranking.slice(0, 5).forEach((u, i) => { // 모바일 배려 5위까지만
-                    rankDiv.innerHTML += `
-                        <div class="flex justify-between items-center text-[11px]">
-                            <span class="text-slate-400 font-bold w-4">${i+1}</span>
-                            <span class="font-bold text-slate-700 flex-grow">${u.name}</span>
-                            <span class="font-black text-blue-600">${u.count}회</span>
-                        </div>`;
+                trafficChart.data.datasets[0].data = data.hourlyTraffic;
+                trafficChart.data.datasets[1].data = data.hourlyAverage;
+                trafficChart.update();
+
+                const peakIdx = data.hourlyAverage.indexOf(Math.max(...data.hourlyAverage));
+                document.getElementById("peakHourText").innerText = peakIdx + "시";
+
+                const rankList = document.getElementById("rankingList");
+                rankList.innerHTML = "";
+                data.ranking.slice(0, 10).forEach((u, i) => {
+                    rankList.innerHTML += `<div class="flex items-center justify-between p-3 border-b border-slate-50"><div class="flex items-center gap-3"><span class="rank-number text-lg w-6">${i+1}</span><span class="font-bold text-slate-700 text-sm">${u.name}님</span></div><span class="font-black text-blue-600 text-sm">${u.count.toLocaleString()}회</span></div>`;
                 });
 
-                // 5. 차트 업데이트
-                trafficChart.data.datasets[0].data = data.hourlyTraffic; trafficChart.update();
-                deviceChart.data.datasets[0].data = [data.total.pc, data.total.mobile]; deviceChart.update();
                 const total = data.total.count || 1;
                 const pcP = Math.round((data.total.pc / total) * 100);
+                deviceChart.data.datasets[0].data = [data.total.pc, data.total.mobile];
+                deviceChart.update();
                 document.getElementById("pcRatio").innerText = pcP + "%";
                 document.getElementById("mobRatio").innerText = (100 - pcP) + "%";
 
-            } catch (e) { console.error("Sync Error:", e); }
+            } catch (e) { console.error("Update Error", e); }
         }
     </script>
 </body>
