@@ -14,6 +14,7 @@
         .scroll-list { max-height: 140px; overflow-y: auto; font-size: 11px; }
         .scroll-list::-webkit-scrollbar { width: 3px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* 모달 팝업 스타일 */
         #detailModal { display: none; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); }
     </style>
 </head>
@@ -113,16 +114,21 @@
     </div>
 
     <script>
-        // ✅ 새로 발급받은 URL이 반영되었습니다.
         const API_URL = "https://script.google.com/macros/s/AKfycbw1ltj9IOtwUzZSaY2sVNELp9NDlNEHf1YduPOTAgc5e0VP8qqwEBq1LQz9xZqfnVWj/exec";
         const ADMIN_PW = "1541";
         let rawData = null;
+
+        // ✅ 엔터키 지원 부활!
+        document.getElementById('pwInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
+        });
 
         function checkPassword() {
             if(document.getElementById('pwInput').value === ADMIN_PW) {
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainDashboard').style.display = 'block';
-                initCharts(); updateDashboard();
+                initCharts(); 
+                updateDashboard();
                 setInterval(updateDashboard, 30000);
             } else { 
                 alert("비밀번호 오류"); 
@@ -130,6 +136,7 @@
             }
         }
 
+        // 모달 팝업 컨트롤
         function openModal(title, usersObj) {
             document.getElementById('modalTitle').innerText = title + " 상세 인원";
             const content = document.getElementById('modalContent');
@@ -148,7 +155,6 @@
             }
             document.getElementById('detailModal').style.display = 'flex';
         }
-
         function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
 
         let trafficChart, deviceChart, weekChart, monthChart;
@@ -162,7 +168,9 @@
                         const index = elements[0].index;
                         const label = chart.data.labels[index];
                         const type = chart.canvas.id === 'weekChart' ? 'weekly' : 'monthly';
-                        openModal(label, rawData[type].details[label]);
+                        if(rawData[type] && rawData[type].details) {
+                            openModal(label, rawData[type].details[label]);
+                        }
                     }
                 },
                 scales: { x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }, y: { display: false } }
@@ -202,7 +210,7 @@
                 rawData = await res.json();
 
                 document.getElementById("updateTime").innerText = "최종 갱신: " + new Date().toLocaleTimeString();
-                document.getElementById("activeCountBadge").innerText = rawData.activeCount + "명";
+                document.getElementById("activeCountBadge").innerText = (rawData.activeCount || 0) + "명 접속 중";
                 document.getElementById("todayCount").innerText = (rawData.daily?.count || 0) + "회";
                 document.getElementById("weekCount").innerText = (rawData.weekly?.count || 0) + "회";
                 document.getElementById("monthCount").innerText = (rawData.monthly?.count || 0) + "회";
@@ -218,11 +226,11 @@
                 const tList = document.getElementById("todayUserList");
                 tList.innerHTML = rawData.daily?.users?.length ? rawData.daily.users.map(u => `<div class="flex justify-between p-2 bg-slate-50 rounded-lg border border-slate-100 font-bold mb-1"><span class="text-slate-700">${u}님</span><span class="text-[9px] text-blue-500 uppercase font-black">Today</span></div>`).join('') : '<p class="text-center py-4 text-slate-300 text-[10px]">기록 없음</p>';
 
-                // 랭킹 리스트
+                // 🚨 버그 완벽 수정 (랭킹 리스트) 🚨
                 const rList = document.getElementById("rankingList");
-                rList.innerHTML = rawData.ranking?.map((u, i) => `<div class="flex justify-between items-center text-[11px] border-b border-slate-50 py-2"><div class="flex gap-3"><span class="rank-number w-4">${i+1}</span><span class="font-bold text-slate-700">${u.name}님</span></div><span class="font-black text-blue-600">${u.count}회</span></div>`).join('') : '<p class="text-slate-300 text-[10px] mt-2">기록 없음</p>';
+                rList.innerHTML = rawData.ranking?.length ? rawData.ranking.map((u, i) => `<div class="flex justify-between items-center text-[11px] border-b border-slate-50 py-2"><div class="flex gap-3"><span class="rank-number w-4">${i+1}</span><span class="font-bold text-slate-700">${u.name}님</span></div><span class="font-black text-blue-600">${u.count}회</span></div>`).join('') : '<p class="text-slate-300 text-[10px] mt-2">기록 없음</p>';
 
-                // 차트 업데이트
+                // 차트 데이터 주입
                 trafficChart.data.datasets[0].data = rawData.hourlyTraffic || Array(24).fill(0);
                 trafficChart.data.datasets[1].data = rawData.hourlyAverage || Array(24).fill(0);
                 trafficChart.update();
@@ -230,16 +238,21 @@
                 weekChart.data.datasets[0].data = rawData.weekly?.dayDist || Array(7).fill(0); weekChart.update();
                 monthChart.data.datasets[0].data = rawData.monthly?.dateDist ? rawData.monthly.dateDist.slice(1) : Array(31).fill(0); monthChart.update();
 
-                const peakIdx = rawData.hourlyAverage?.indexOf(Math.max(...rawData.hourlyAverage));
+                // 피크 타임 계산
+                let peakIdx = -1;
+                if(rawData.hourlyAverage && rawData.hourlyAverage.length > 0) {
+                    peakIdx = rawData.hourlyAverage.indexOf(Math.max(...rawData.hourlyAverage));
+                }
                 document.getElementById("peakHourText").innerText = peakIdx >= 0 ? "Peak: " + peakIdx + "시" : "Peak: --시";
 
+                // 기기 비중 계산
                 const total = rawData.total?.count || 1;
                 const pcP = Math.round(((rawData.total?.pc || 0) / total) * 100);
                 deviceChart.data.datasets[0].data = [rawData.total?.pc || 0, rawData.total?.mobile || 0]; deviceChart.update();
                 document.getElementById("pcRatio").innerText = pcP + "%";
                 document.getElementById("mobRatio").innerText = (100 - pcP) + "%";
 
-            } catch (e) { console.error("데이터 로드 실패:", e); }
+            } catch (e) { console.error("데이터 렌더링 오류:", e); }
         }
     </script>
 </body>
