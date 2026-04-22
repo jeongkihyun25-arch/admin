@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BSTK 관제 센터 Ultimate</title>
+    <title>BSTK 관제 센터 Grid</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,86 +11,83 @@
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
         #mainDashboard { display: none; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .scroll-list { max-height: 100px; overflow-y: auto; font-size: 11px; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: 100%; display: flex; flex-direction: column; }
+        .scroll-list { flex-grow: 1; max-height: 150px; overflow-y: auto; font-size: 11px; }
         .scroll-list::-webkit-scrollbar { width: 3px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .tab-btn.active { background: #3b82f6; color: white; }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-[9999] flex items-center justify-center p-6">
         <div class="w-full max-w-xs text-center">
-            <h1 class="text-white text-3xl font-black mb-10 tracking-tighter italic">BSTK ADMIN</h1>
+            <h1 class="text-white text-3xl font-black mb-10 italic">BSTK ADMIN</h1>
             <input type="password" id="pwInput" placeholder="PIN" maxlength="4" class="w-full bg-slate-800 border-none rounded-2xl text-white text-4xl text-center mb-6 py-5 focus:ring-2 focus:ring-blue-500 outline-none">
             <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg">시스템 접속</button>
         </div>
     </div>
 
-    <div id="mainDashboard" class="p-4 max-w-4xl mx-auto space-y-4">
-        <header class="flex justify-between items-center py-2">
+    <div id="mainDashboard" class="p-4 max-w-5xl mx-auto space-y-4">
+        <header class="flex justify-between items-end py-2">
             <div>
-                <h2 class="text-xl font-black text-slate-900">실시간 관제 시스템</h2>
-                <p id="updateTime" class="text-[10px] font-bold text-slate-400">SYNCING...</p>
+                <h2 class="text-xl font-black text-slate-900">BSTK 관제 시스템</h2>
+                <p id="updateTime" class="text-[10px] font-bold text-slate-400">데이터 수신 중...</p>
             </div>
-            <div id="activeCountBadge" class="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-md animate-pulse">0명 접속</div>
+            <div id="activeCountBadge" class="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-md animate-pulse">0명</div>
         </header>
 
         <section class="glass-card p-4 border-l-4 border-l-blue-600">
-            <h3 class="font-bold text-[10px] text-slate-400 mb-3 uppercase tracking-widest">Active Users</h3>
-            <div id="userList" class="flex flex-wrap gap-2"></div>
+            <div id="userList" class="flex flex-wrap gap-2 min-h-[20px]">
+                <p class="text-slate-300 text-[11px] italic">현재 접속자 확인 중...</p>
+            </div>
         </section>
 
-        <div class="space-y-4">
-            <div class="glass-card p-4">
-                <div class="flex justify-between items-center mb-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Today</h3>
-                    <span id="todayCount" class="text-lg font-black text-blue-600">0회</span>
+                    <span id="todayCount" class="text-xl font-black text-blue-600">0회</span>
                 </div>
-                <div id="todayUserList" class="scroll-list space-y-1.5 border-t pt-3"></div>
+                <div id="todayUserList" class="scroll-list space-y-2 border-t pt-3"></div>
             </div>
 
-            <div class="glass-card p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Weekly Distribution</h3>
-                    <span id="weekCount" class="text-lg font-black text-indigo-600">0회</span>
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Weekly</h3>
+                    <span id="weekCount" class="text-xl font-black text-indigo-600">0회</span>
                 </div>
-                <div class="h-24 w-full mb-3"><canvas id="weekChart"></canvas></div>
-                <div id="weekUserList" class="scroll-list space-y-1.5 border-t pt-3 text-slate-500 italic"></div>
+                <div class="h-20 w-full mb-3"><canvas id="weekChart"></canvas></div>
+                <div id="weekUserList" class="scroll-list space-y-2 border-t pt-3"></div>
             </div>
 
-            <div class="glass-card p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Monthly Trend (1-31)</h3>
-                    <span id="monthCount" class="text-lg font-black text-emerald-600">0회</span>
+            <div class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Monthly</h3>
+                    <span id="monthCount" class="text-xl font-black text-emerald-600">0회</span>
                 </div>
-                <div class="h-24 w-full mb-3"><canvas id="monthChart"></canvas></div>
-                <div id="monthUserList" class="scroll-list space-y-1.5 border-t pt-3 text-slate-500 italic"></div>
+                <div class="h-20 w-full mb-3"><canvas id="monthChart"></canvas></div>
+                <div id="monthUserList" class="scroll-list space-y-2 border-t pt-3"></div>
+            </div>
+
+            <div class="glass-card p-5">
+                <h3 class="font-bold text-xs text-slate-400 mb-4 uppercase tracking-widest">User Ranking</h3>
+                <div id="rankingList" class="scroll-list space-y-1"></div>
             </div>
         </div>
 
         <section class="glass-card p-5">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="font-bold text-[10px] text-slate-400 uppercase tracking-widest">24H Traffic vs Average</h3>
-                <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase">Peak</p>
-                    <p id="peakHourText" class="text-sm font-black text-red-500">--시</p>
-                </div>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-[10px] text-slate-400 uppercase tracking-widest">24H Traffic Comparison</h3>
+                <p id="peakHourText" class="text-xs font-black text-red-500">Peak: --시</p>
             </div>
-            <div class="h-32 w-full"><canvas id="trafficChart"></canvas></div>
+            <div class="h-40 w-full"><canvas id="trafficChart"></canvas></div>
         </section>
 
-        <section class="glass-card p-5">
-            <h3 class="font-bold text-[10px] text-slate-400 mb-4 uppercase tracking-widest">User Ranking</h3>
-            <div id="rankingList" class="grid grid-cols-2 gap-x-4 gap-y-2"></div>
-        </section>
-
-        <section class="glass-card p-5 flex items-center justify-around">
-            <div class="w-24 h-24 relative"><canvas id="deviceChart"></canvas></div>
-            <div class="space-y-2 text-right">
-                <div><p class="text-[9px] font-bold text-slate-400 uppercase">PC</p><p id="pcRatio" class="text-lg font-black text-blue-600">0%</p></div>
-                <div><p class="text-[9px] font-bold text-slate-400 uppercase">MOB</p><p id="mobRatio" class="text-lg font-black text-purple-600">0%</p></div>
+        <section class="glass-card p-4 flex items-center justify-around">
+            <div class="w-20 h-20 relative"><canvas id="deviceChart"></canvas></div>
+            <div class="flex gap-6 text-right">
+                <div><p class="text-[9px] font-bold text-slate-400">PC</p><p id="pcRatio" class="text-lg font-black text-blue-600">0%</p></div>
+                <div><p class="text-[9px] font-bold text-slate-400">MOB</p><p id="mobRatio" class="text-lg font-black text-purple-600">0%</p></div>
             </div>
         </section>
     </div>
@@ -111,34 +108,20 @@
         let trafficChart, deviceChart, weekChart, monthChart;
 
         function initCharts() {
-            const chartOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } };
+            const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } };
 
-            trafficChart = new Chart(document.getElementById('trafficChart').getContext('2d'), {
+            trafficChart = new Chart(document.getElementById('trafficChart'), {
                 type: 'line',
                 data: { labels: Array.from({length: 24}, (_, i) => i + '시'), datasets: [
                     { label: '오늘', data: Array(24).fill(0), borderColor: '#3b82f6', fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)', tension: 0.4, borderWidth: 3, pointRadius: 0 },
                     { label: '평균', data: Array(24).fill(0), borderColor: '#cbd5e1', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 1.5, pointRadius: 0 }
                 ]},
-                options: chartOpt
+                options: { ...opt, plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 } } } } }
             });
 
-            weekChart = new Chart(document.getElementById('weekChart').getContext('2d'), {
-                type: 'bar',
-                data: { labels: ['일', '월', '화', '수', '목', '금', '토'], datasets: [{ data: Array(7).fill(0), backgroundColor: '#6366f1', borderRadius: 4 }] },
-                options: chartOpt
-            });
-
-            monthChart = new Chart(document.getElementById('monthChart').getContext('2d'), {
-                type: 'bar',
-                data: { labels: Array.from({length: 31}, (_, i) => i + 1), datasets: [{ data: Array(31).fill(0), backgroundColor: '#10b981', borderRadius: 2 }] },
-                options: chartOpt
-            });
-
-            deviceChart = new Chart(document.getElementById('deviceChart').getContext('2d'), {
-                type: 'doughnut',
-                data: { labels: ['PC', 'Mob'], datasets: [{ data: [1, 1], backgroundColor: ['#3b82f6', '#a855f7'], borderWidth: 0, cutout: '80%' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            weekChart = new Chart(document.getElementById('weekChart'), { type: 'bar', data: { labels: ['일','월','화','수','목','금','토'], datasets: [{ data: Array(7).fill(0), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: opt });
+            monthChart = new Chart(document.getElementById('monthChart'), { type: 'bar', data: { labels: Array.from({length: 31}, (_, i) => i + 1), datasets: [{ data: Array(31).fill(0), backgroundColor: '#10b981', borderRadius: 2 }] }, options: opt });
+            deviceChart = new Chart(document.getElementById('deviceChart'), { type: 'doughnut', data: { labels: ['PC','Mob'], datasets: [{ data: [1,1], backgroundColor: ['#3b82f6','#a855f7'], borderWidth: 0, cutout: '80%' }] }, options: { ...opt, cutout: '80%' } });
         }
 
         async function updateDashboard() {
@@ -152,45 +135,36 @@
                 document.getElementById("weekCount").innerText = data.weekly.count + "회";
                 document.getElementById("monthCount").innerText = data.monthly.count + "회";
 
-                // 실시간 리스트
-                const userList = document.getElementById("userList");
-                userList.innerHTML = data.activeList.length ? "" : '<p class="text-slate-300 text-[10px]">접속자 없음</p>';
+                const uList = document.getElementById("userList");
+                uList.innerHTML = data.activeList.length ? "" : '<p class="text-slate-300 text-[11px]">현재 접속자 없음</p>';
                 data.activeList.forEach(u => {
-                    userList.innerHTML += `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg font-bold border border-blue-100 flex items-center gap-1.5 text-[10px]"><span class="w-1 h-1 bg-blue-600 rounded-full animate-pulse"></span> ${u.name}</span>`;
+                    uList.innerHTML += `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg font-bold border border-blue-100 flex items-center gap-1.5 text-[10px]"><span class="w-1 h-1 bg-blue-600 rounded-full animate-pulse"></span> ${u.name}</span>`;
                 });
 
-                // 명단 스크롤 (오늘/주간/월간 공통)
-                const renderList = (id, users) => {
+                const renderScroll = (id, users) => {
                     const el = document.getElementById(id);
-                    el.innerHTML = users?.length ? users.map(u => `<div class="flex justify-between p-1.5 bg-slate-50 rounded border border-slate-100"><span class="font-bold">${u}님</span><span class="text-[8px] text-slate-400">ACCESS</span></div>`).join('') : '<p class="text-center py-2 text-slate-300 text-[10px]">기록 없음</p>';
+                    el.innerHTML = users?.length ? users.map(u => `<div class="flex justify-between p-1.5 bg-slate-50 rounded border border-slate-100 font-bold mb-1"><span>${u}님</span><span class="text-[8px] text-slate-400">OK</span></div>`).join('') : '<p class="text-center py-4 text-slate-300 text-[10px]">기록 없음</p>';
                 }
-                renderList("todayUserList", data.daily.users);
-                renderList("weekUserList", data.weekly.users);
-                renderList("monthUserList", data.monthly.users);
+                renderScroll("todayUserList", data.daily.users);
+                renderScroll("weekUserList", data.weekly.users);
+                renderScroll("monthUserList", data.monthly.users);
 
-                // 차트 업데이트
                 trafficChart.data.datasets[0].data = data.hourlyTraffic;
                 trafficChart.data.datasets[1].data = data.hourlyAverage;
                 trafficChart.update();
 
-                weekChart.data.datasets[0].data = data.weekly.dayDist;
-                weekChart.update();
-
-                monthChart.data.datasets[0].data = data.monthly.dateDist.slice(1);
-                monthChart.update();
+                weekChart.data.datasets[0].data = data.weekly.dayDist; weekChart.update();
+                monthChart.data.datasets[0].data = data.monthly.dateDist.slice(1); monthChart.update();
 
                 const peakIdx = data.hourlyAverage.indexOf(Math.max(...data.hourlyAverage));
-                document.getElementById("peakHourText").innerText = peakIdx + "시";
+                document.getElementById("peakHourText").innerText = "Peak: " + peakIdx + "시";
 
-                // 랭킹
-                const rankList = document.getElementById("rankingList");
-                rankList.innerHTML = data.ranking.map((u, i) => `<div class="flex justify-between text-[11px] border-b border-slate-50 py-1.5"><span class="font-bold text-slate-400 w-4">${i+1}</span><span class="font-bold text-slate-700 flex-grow">${u.name}</span><span class="font-black text-blue-600">${u.count}</span></div>`).join('');
+                const rList = document.getElementById("rankingList");
+                rList.innerHTML = data.ranking.map((u, i) => `<div class="flex justify-between text-[11px] border-b border-slate-50 py-1.5"><span class="font-bold text-slate-400 w-4">${i+1}</span><span class="font-bold text-slate-700 flex-grow">${u.name}</span><span class="font-black text-blue-600">${u.count}</span></div>`).join('');
 
-                // 기기 비중
                 const total = data.total.count || 1;
                 const pcP = Math.round((data.total.pc / total) * 100);
-                deviceChart.data.datasets[0].data = [data.total.pc, data.total.mobile];
-                deviceChart.update();
+                deviceChart.data.datasets[0].data = [data.total.pc, data.total.mobile]; deviceChart.update();
                 document.getElementById("pcRatio").innerText = pcP + "%";
                 document.getElementById("mobRatio").innerText = (100 - pcP) + "%";
 
