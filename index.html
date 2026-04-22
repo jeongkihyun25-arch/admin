@@ -1,196 +1,112 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BSTK 관제 센터 Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; -webkit-font-smoothing: antialiased; }
-        #mainDashboard { display: none; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: 100%; display: flex; flex-direction: column; }
-        .scroll-list { flex-grow: 1; max-height: 140px; overflow-y: auto; font-size: 11px; padding-right: 4px; }
-        .scroll-list::-webkit-scrollbar { width: 3px; }
-        .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .rank-number { font-style: italic; font-weight: 900; color: #94a3b8; }
-    </style>
-</head>
-<body class="text-slate-800">
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var deviceSheet = ss.getSheetByName("devices");
+  var logSheet = ss.getSheetByName("logs");
+  var summarySheet = ss.getSheetByName("daily_summary"); 
+  
+  var deviceData = deviceSheet.getDataRange().getValues();
+  var logData = logSheet.getDataRange().getValues();
+  var summaryData = summarySheet ? summarySheet.getDataRange().getValues() : [];
+  var now = new Date();
+  
+  var todayStr = Utilities.formatDate(now, "GMT+9", "yyyy-MM-dd");
+  var monthStr = Utilities.formatDate(now, "GMT+9", "yyyy-MM");
+  
+  // 월요일 시작 주간 계산
+  var firstDayOfWeek = new Date(now);
+  var day = firstDayOfWeek.getDay() || 7; 
+  if(day !== 1) firstDayOfWeek.setHours(-24 * (day - 1));
+  var weekStartStr = Utilities.formatDate(firstDayOfWeek, "GMT+9", "yyyy-MM-dd");
 
-    <div id="loginOverlay" class="fixed inset-0 bg-slate-900 z-[9999] flex items-center justify-center p-6">
-        <div class="w-full max-w-xs text-center">
-            <h1 class="text-white text-3xl font-black mb-10 italic">BSTK ADMIN</h1>
-            <input type="password" id="pwInput" placeholder="PIN" maxlength="4" class="w-full bg-slate-800 border-none rounded-2xl text-white text-4xl text-center mb-6 py-5 focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="checkPassword()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg">시스템 접속</button>
-        </div>
-    </div>
+  var activeList = [];
+  var daily = { count: 0, pc: 0, mobile: 0, users: new Set() };
+  
+  // 상세 클릭 데이터를 위한 구조
+  var weekly = { count: 0, dayDist: new Array(7).fill(0), details: {} }; // details: { "월": { "이름": 횟수 } }
+  var monthly = { count: 0, dateDist: new Array(32).fill(0), details: {} }; // details: { "15": { "이름": 횟수 } }
+  
+  var userRanking = {};
+  var hourlyTraffic = new Array(24).fill(0);
+  var dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
-    <div id="mainDashboard" class="p-4 max-w-5xl mx-auto space-y-4">
-        <header class="flex justify-between items-end py-2 border-b border-slate-200 pb-4">
-            <div>
-                <h2 class="text-xl font-black text-slate-900">BSTK 실시간 관제</h2>
-                <div id="activeCountBadge" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-sm animate-pulse mt-1">0명 접속 중</div>
-            </div>
-            <div class="text-right flex flex-col items-end">
-                <p id="updateTime" class="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">LIVE SYNCING...</p>
-                <div class="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div id="progress" class="h-full bg-blue-600 w-0 transition-all duration-[30000ms] ease-linear"></div>
-                </div>
-            </div>
-        </header>
+  // 1. 실시간 체크 (기존 로직)
+  for(var i=1; i<deviceData.length; i++) {
+    var uName = deviceData[i][0];
+    if(uName === "정기현") continue;
+    if (deviceData[i][4] === "ON" && deviceData[i][3]) {
+      if ((now.getTime() - new Date(deviceData[i][3]).getTime()) / 1000 < 75) activeList.push({ name: uName });
+      else deviceSheet.getRange(i + 1, 5).setValue("OFF");
+    }
+  }
 
-        <section class="glass-card p-4 border-l-4 border-l-blue-600">
-            <div id="userList" class="flex flex-wrap gap-2 min-h-[24px]">
-                <p class="text-slate-300 text-[11px] italic">현재 접속자 파악 중...</p>
-            </div>
-        </section>
+  // 데이터 합산 함수
+  function addDetail(target, key, name, count) {
+    if(!target[key]) target[key] = {};
+    target[key][name] = (target[key][name] || 0) + (count || 1);
+  }
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="glass-card p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Today</h3>
-                    <span id="todayCount" class="text-xl font-black text-blue-600">0회</span>
-                </div>
-                <div id="todayUserList" class="scroll-list space-y-1.5 border-t pt-3"></div>
-            </div>
+  // 2. 로그 분석
+  for(var j=1; j<logData.length; j++) {
+    var logTime = new Date(logData[j][0]);
+    if(isNaN(logTime.getTime())) continue;
+    var lDayStr = Utilities.formatDate(logTime, "GMT+9", "yyyy-MM-dd");
+    var lMonStr = Utilities.formatDate(logTime, "GMT+9", "yyyy-MM");
+    var uName = logData[j][1];
+    if(uName === "정기현") continue;
 
-            <div class="glass-card p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Weekly (Mon-Sun)</h3>
-                    <span id="weekCount" class="text-xl font-black text-indigo-600">0회</span>
-                </div>
-                <div class="h-20 w-full mb-3"><canvas id="weekChart"></canvas></div>
-                <div id="weekUserList" class="scroll-list space-y-1.5 border-t pt-3"></div>
-            </div>
+    userRanking[uName] = (userRanking[uName] || 0) + 1;
 
-            <div class="glass-card p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-xs text-slate-400 uppercase tracking-widest">Monthly (1-31)</h3>
-                    <span id="monthCount" class="text-xl font-black text-emerald-600">0회</span>
-                </div>
-                <div class="h-20 w-full mb-3"><canvas id="monthChart"></canvas></div>
-                <div id="monthUserList" class="scroll-list space-y-1.5 border-t pt-3"></div>
-            </div>
+    if(lDayStr === todayStr) {
+      daily.count++;
+      if(logData[j][2] === "PC") daily.pc++; else daily.mobile++;
+      hourlyTraffic[logTime.getHours()]++;
+      daily.users.add(uName);
+    }
+    if(lDayStr >= weekStartStr) {
+      weekly.count++;
+      var dIdx = (logTime.getDay() + 6) % 7;
+      weekly.dayDist[dIdx]++;
+      addDetail(weekly.details, dayNames[logTime.getDay()], uName, 1);
+    }
+    if(lMonStr === monthStr) {
+      monthly.count++;
+      monthly.dateDist[logTime.getDate()]++;
+      addDetail(monthly.details, logTime.getDate().toString(), uName, 1);
+    }
+  }
 
-            <div class="glass-card p-5">
-                <h3 class="font-bold text-xs text-slate-400 mb-4 uppercase tracking-widest">User Ranking (Top 10)</h3>
-                <div id="rankingList" class="scroll-list space-y-0.5"></div>
-            </div>
-        </div>
+  // 3. 요약 데이터 합산 (압축 데이터)
+  summaryData.forEach(function(r, k) {
+    if(k === 0 || !r[0]) return;
+    var sDate = new Date(r[0]);
+    var sDayStr = Utilities.formatDate(sDate, "GMT+9", "yyyy-MM-dd");
+    var sMonStr = Utilities.formatDate(sDate, "GMT+9", "yyyy-MM");
+    var sName = r[1], sCount = parseInt(r[2]) || 0;
+    if(sName === "정기현") return;
 
-        <section class="glass-card p-5">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h3 class="font-bold text-[10px] text-slate-400 uppercase tracking-widest">24H Traffic Comparison</h3>
-                    <p class="text-[9px] text-slate-400 mt-0.5">오늘 실시간 vs 과거 시간대별 평균</p>
-                </div>
-                <p id="peakHourText" class="text-xs font-black text-red-500">Peak: --시</p>
-            </div>
-            <div class="h-40 w-full"><canvas id="trafficChart"></canvas></div>
-        </section>
+    userRanking[sName] = (userRanking[sName] || 0) + sCount;
+    if(sMonStr === monthStr) {
+      monthly.count += sCount;
+      monthly.dateDist[sDate.getDate()] += sCount;
+      addDetail(monthly.details, sDate.getDate().toString(), sName, sCount);
+    }
+    if(sDayStr >= weekStartStr) {
+      weekly.count += sCount;
+      weekly.dayDist[(sDate.getDay() + 6) % 7] += sCount;
+      addDetail(weekly.details, dayNames[sDate.getDay()], sName, sCount);
+    }
+  });
 
-        <section class="glass-card p-5 flex items-center justify-around">
-            <div class="w-24 h-24 relative"><canvas id="deviceChart"></canvas></div>
-            <div class="flex gap-8 text-right">
-                <div><p class="text-[10px] font-bold text-slate-400 uppercase">PC</p><p id="pcRatio" class="text-xl font-black text-blue-600">0%</p></div>
-                <div><p class="text-[10px] font-bold text-slate-400 uppercase">MOB</p><p id="mobRatio" class="text-xl font-black text-purple-600">0%</p></div>
-            </div>
-        </section>
-    </div>
+  var result = {
+    activeCount: activeList.length,
+    activeList: activeList,
+    daily: { count: daily.count, users: Array.from(daily.users) },
+    weekly: weekly,
+    monthly: monthly,
+    ranking: Object.entries(userRanking).sort((a,b)=>b[1]-a[1]).slice(0,10).map(i=>({name:i[0], count:i[1]})),
+    hourlyTraffic: hourlyTraffic,
+    total: { pc: daily.pc, mobile: daily.mobile, count: daily.count + (summaryData.length) } // 예시용
+  };
 
-    <script>
-        // ✅ 최신 배포 URL 적용
-        const API_URL = "https://script.google.com/macros/s/AKfycbyUDcSVkOZ7aAcgEhz2nrxvw7WchSb43HWLzDQZAmLRffBWkrdY6Ij13vVXxoCLKNU/exec";
-        const ADMIN_PW = "1541";
-        
-        function checkPassword() {
-            if(document.getElementById('pwInput').value === ADMIN_PW) {
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainDashboard').style.display = 'block';
-                initCharts(); updateDashboard();
-                setInterval(updateDashboard, 30000);
-            } else { alert("비밀번호 오류"); document.getElementById('pwInput').value = ''; }
-        }
-
-        let trafficChart, deviceChart, weekChart, monthChart;
-
-        function initCharts() {
-            const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } };
-
-            trafficChart = new Chart(document.getElementById('trafficChart'), {
-                type: 'line',
-                data: { labels: Array.from({length: 24}, (_, i) => i + '시'), datasets: [
-                    { label: '오늘', data: Array(24).fill(0), borderColor: '#3b82f6', fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)', tension: 0.4, borderWidth: 3, pointRadius: 0 },
-                    { label: '평균', data: Array(24).fill(0), borderColor: '#cbd5e1', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 1.5, pointRadius: 0 }
-                ]},
-                options: { ...opt, plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 } } } }, scales: { x: { display: true, grid: { display: false } }, y: { display: false } } }
-            });
-
-            weekChart = new Chart(document.getElementById('weekChart'), { type: 'bar', data: { labels: ['월','화','수','목','금','토','일'], datasets: [{ data: Array(7).fill(0), backgroundColor: '#6366f1', borderRadius: 4 }] }, options: opt });
-            monthChart = new Chart(document.getElementById('monthChart'), { type: 'bar', data: { labels: Array.from({length: 31}, (_, i) => i + 1), datasets: [{ data: Array(31).fill(0), backgroundColor: '#10b981', borderRadius: 2 }] }, options: opt });
-            deviceChart = new Chart(document.getElementById('deviceChart'), { type: 'doughnut', data: { labels: ['PC','Mob'], datasets: [{ data: [1,1], backgroundColor: ['#3b82f6','#a855f7'], borderWidth: 0, cutout: '80%' }] }, options: { ...opt, cutout: '80%' } });
-        }
-
-        async function updateDashboard() {
-            const bar = document.getElementById("progress");
-            bar.style.transition = 'none'; bar.style.width = "0%";
-            setTimeout(() => { bar.style.transition = 'width 30000ms linear'; bar.style.width = "100%"; }, 100);
-
-            try {
-                const res = await fetch(API_URL);
-                const data = await res.json();
-
-                document.getElementById("updateTime").innerText = "최종 갱신: " + new Date().toLocaleTimeString();
-                document.getElementById("activeCountBadge").innerText = data.activeCount + "명 접속 중";
-                document.getElementById("todayCount").innerText = (data.daily?.count || 0) + "회";
-                document.getElementById("weekCount").innerText = (data.weekly?.count || 0) + "회";
-                document.getElementById("monthCount").innerText = (data.monthly?.count || 0) + "회";
-
-                // 실시간 리스트
-                const uList = document.getElementById("userList");
-                uList.innerHTML = data.activeList?.length ? "" : '<p class="text-slate-300 text-[11px] italic">현재 접속자 없음</p>';
-                data.activeList?.forEach(u => {
-                    uList.innerHTML += `<span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg font-bold border border-blue-100 flex items-center gap-1.5 text-[10px]"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span> ${u.name}</span>`;
-                });
-
-                // 오늘 명단
-                const tList = document.getElementById("todayUserList");
-                tList.innerHTML = data.daily?.users?.length ? data.daily.users.map(u => `<div class="flex justify-between p-2 bg-slate-50 rounded-lg border border-slate-100 font-bold mb-1"><span class="text-slate-700">${u}님</span><span class="text-[9px] text-blue-500 uppercase">Today</span></div>`).join('') : '<p class="text-center py-4 text-slate-300 text-[10px]">기록 없음</p>';
-
-                // 주간 명단 (이름 + 요일)
-                const wList = document.getElementById("weekUserList");
-                wList.innerHTML = data.weekly?.users?.length ? data.weekly.users.map(u => `<div class="flex flex-col p-2 bg-indigo-50/40 rounded-lg border border-indigo-50 font-bold mb-1"><span class="text-slate-700 text-[11px] mb-0.5">${u.name}님</span><span class="text-[9px] text-indigo-400 break-words">${u.details}</span></div>`).join('') : '<p class="text-center py-4 text-slate-300 text-[10px]">기록 없음</p>';
-
-                // 월간 명단 (이름 + 날짜)
-                const mList = document.getElementById("monthUserList");
-                mList.innerHTML = data.monthly?.users?.length ? data.monthly.users.map(u => `<div class="flex flex-col p-2 bg-emerald-50/40 rounded-lg border border-emerald-50 font-bold mb-1"><span class="text-slate-700 text-[11px] mb-0.5">${u.name}님</span><span class="text-[9px] text-emerald-500 break-words">${u.details}</span></div>`).join('') : '<p class="text-center py-4 text-slate-300 text-[10px]">기록 없음</p>';
-
-                // 랭킹
-                const rList = document.getElementById("rankingList");
-                rList.innerHTML = data.ranking?.length ? data.ranking.map((u, i) => `<div class="flex justify-between items-center text-[11px] border-b border-slate-50 py-2"><div class="flex gap-3"><span class="rank-number w-4">${i+1}</span><span class="font-bold text-slate-700">${u.name}님</span></div><span class="font-black text-blue-600">${u.count}회</span></div>`).join('') : '<p class="text-slate-300 text-[10px] mt-2">기록 없음</p>';
-
-                // 차트 업데이트
-                trafficChart.data.datasets[0].data = data.hourlyTraffic || Array(24).fill(0);
-                trafficChart.data.datasets[1].data = data.hourlyAverage || Array(24).fill(0);
-                trafficChart.update();
-
-                weekChart.data.datasets[0].data = data.weekly?.dayDist || Array(7).fill(0); weekChart.update();
-                monthChart.data.datasets[0].data = data.monthly?.dateDist ? data.monthly.dateDist.slice(1) : Array(31).fill(0); monthChart.update();
-
-                const peakIdx = data.hourlyAverage?.indexOf(Math.max(...data.hourlyAverage));
-                document.getElementById("peakHourText").innerText = peakIdx >= 0 ? "Peak: " + peakIdx + "시" : "Peak: --시";
-
-                const total = data.total?.count || 1;
-                const pcP = Math.round(((data.total?.pc || 0) / total) * 100);
-                deviceChart.data.datasets[0].data = [data.total?.pc || 0, data.total?.mobile || 0]; deviceChart.update();
-                document.getElementById("pcRatio").innerText = pcP + "%";
-                document.getElementById("mobRatio").innerText = (100 - pcP) + "%";
-
-            } catch (e) { console.error("데이터 로드 실패:", e); }
-        }
-    </script>
-</body>
-</html>
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
